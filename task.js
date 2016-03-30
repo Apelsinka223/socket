@@ -113,12 +113,6 @@ function server()
             logger.info("Published message '" + message + "'");
         });
     }, 500);
-        //if (message >= 1000000)
-        //{
-        //    clearInterval(generator);
-        //    client.persist('server');
-        //}
-    //}, 0); // Для проверки
 }
 
 function listener()
@@ -152,8 +146,7 @@ function listener()
             }
         });
 
-    }, 600); // Чтобы видеть обработку несколькими приложениями
-    //}, 1); // Для проверки
+    }, 600);
 
     var checkserver = setInterval(function () {
         client.get('server', function(err, res)
