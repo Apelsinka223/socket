@@ -1,6 +1,6 @@
 # socket
 
-Выполнение тестового задания на node.js
+## Выполнение тестового задания на node.js
 
 При написании разрешено использовать любые встроенные nodejs модули(за исключением
 cluster), а также logger, underscore, async, step, redis, minimist.
