@@ -15,6 +15,7 @@ client.on("error", function (err) {
     }
 });
 
+// Запуск для вывода накопившихся сообщений об ошибке
 if (process.argv[2] == 'getErrors')
 {
     client.smembers('error_messages', function(err, res) {
@@ -23,7 +24,6 @@ if (process.argv[2] == 'getErrors')
             logger.error(err);
             client.end();
         }
-        console.log(res);
         client.del('error_messages', function(err) {
             if (err)
             {
@@ -37,6 +37,8 @@ if (process.argv[2] == 'getErrors')
 }
 else
 {
+    // Задаем pid процессу (pid последнего запущенного процесса lastID + 1)
+    // и записываем новый lastID
     client.get("lastID", function (err, res) {
         if (err)
         {
@@ -58,6 +60,8 @@ else
         logger.info('pid: ' + pid);
     });
 
+    // Если не задан сервер - то данный процесс будет сервером,
+    // иначе - слушателем
     client.get("server", function(err, res) {
         if (err)
         {
@@ -75,21 +79,23 @@ else
     });
 }
 
-
+// Генерация сообщений (из задания)
 function getMessage(){
     this.cnt = this.cnt || 0;
     return this.cnt++;
 }
 
+// Обработка сообщений (из задания)
 function eventHandler(msg, callback){
     function onComplete(){
         var error = Math.random() > 0.85;
         callback(error, msg);
     }
-// processing takes time...
+    // processing takes time...
     setTimeout(onComplete, Math.floor(Math.random()*1000));
 }
 
+// Запуск сервера
 function server()
 {
     client.set('server', pid, function (err) {
@@ -100,7 +106,10 @@ function server()
         }
         logger.info('server: ' + pid);
     });
+    // Генерируем сообщения
     var generator = setInterval(function () {
+        // Запоминаем сервер на 1 секунду
+        // Если сервер упадет, то запись очистится и выберется новый сервер
         client.expire('server', 1);
         var message = getMessage();
 
@@ -113,11 +122,19 @@ function server()
             logger.info("Published message '" + message + "'");
         });
     }, 500);
+     //if (message >= 1000000)
+    //{
+        //    clearInterval(generator);
+        //    client.persist('server');
+        //}
+    //}, 0); // Для проверки что генерируется 1000000 сообщений
 }
 
+// Запуск слушателя
 function listener()
 {
     var message = '';
+    // Слушаем сообщения
     var listen = setInterval(function () {
         client.spop('messages', function (err, res)
         {
@@ -146,8 +163,11 @@ function listener()
             }
         });
 
-    }, 600);
+    }, 600); // > 500 чтобы видеть обработку несколькими приложениями
+    //}, 1); // Для проверки, что генерирутся 1000000 сообщений
 
+    // Проверяем не упал ли сервер каждую секунду
+    // Если упал - делаем из процесса новый сервер
     var checkserver = setInterval(function () {
         client.get('server', function(err, res)
         {
@@ -160,7 +180,9 @@ function listener()
             {
                 logger.error("No server");
                 server();
+                // Перестаем слушать сообщения
                 clearInterval(listen);
+                // Перестаем проверять, упал ли сервер
                 clearInterval(checkserver);
             }
         })
